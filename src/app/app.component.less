@@ -1,5 +1,6 @@
 @color_back1:#6fe5e9;
 @color_back2:#f0e76e;
+@color_text:#000000;
 .base(){
     display:flex; 
     flex-direction: row;
@@ -24,4 +25,29 @@ header{
     .base;
     margin: 3%;
     .text;
+}
+h3{
+    background: linear-gradient(to right, @color_back1, @color_back2);
+    display:flex;
+    .base;
+    margin: 3%;
+    .text;
+}
+.er{
+    display: flex;
+    .base;
+    .btn{
+        width: 10%;
+        height: 25%;
+        margin:4px;
+        background: linear-gradient(to right, @color_back1, @color_back2);
+        .text;
+        &:hover{
+            background: linear-gradient(to right, #08c2cf, #e7d52d);
+          color: @color_text;
+          transition:background-color 0.4s ease;
+          border: 2px solid @color_text;
+        }
+        cursor: pointer;
+    }
 }

@@ -1,81 +1,55 @@
 // import { identifierName, ReturnStatement } from "@angular/compiler";
-import { Component, ChangeDetectionStrategy } from "@angular/core";
+import { Component, ChangeDetectionStrategy,  ChangeDetectorRef   } from "@angular/core";
+import { ActivatedRoute,  Router } from "@angular/router";
+import { OnlineStudentService } from "../service/stud-online.service";
+import { StudentService, OflineStudentService } from "../service/stud-ofline.service";
+
 import { Student } from "./student";
 
 @Component({
   selector: "app-workStud",
   templateUrl: "./tableStud.component.html",
   styleUrls: ["./tableStud.component.less"],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [{
+    provide: StudentService,
+    useFactory: (snapshot: ActivatedRoute): StudentService => {
+      return snapshot.snapshot.url[snapshot.snapshot.url.length - 1].path === "online" ?
+      new OnlineStudentService() :
+      new OflineStudentService();
+    },
+    deps: [ActivatedRoute]
+  }]
 })
 export class TableStudComponent {
   title = "student_list";
 
+  online = true;
+  constructor(public ref: ChangeDetectorRef, public studService: StudentService, public router: Router, public activeRoute: ActivatedRoute){
+    activeRoute.url.subscribe((e) => {
+        if (e[e.length - 1].path === "online"){
+          this.online = true;
+        } else {
+          this.online = false;
+        }
+      });
+    const today = new Date();
+    this.minDate = new Date(today.setFullYear(today.getFullYear() - 30));
+
+  }
+
   // массив студентов
-  students: Student[] = [];
+  // students: Student[] = [];
   // для вывода в таблицу
-  tableStud: Student[] = [];
+  // tableStud: Student[] = [];
+
   classOn: boolean = true;
   fiterParam: string = "number";
   filterStart: Date | number = 0.0;
   filterEnd: Date | number = 5.0;
   minDate: Date = new Date();
   processDel: boolean = false;
-  delStudent: Student = new Student("n", "s", "p", new Date(), 0);
-
-  constructor(){
-    const today = new Date();
-    this.minDate = new Date(today.setFullYear(today.getFullYear() - 30));
-    this.fillStudent();
-  }
-
-  fillStudent(): void {
-    const names: string[] = ["виктория", "Таисия", "Роберт", "Мирослава",
-    "Максим", "Анна", "Маргарита", "Максим", "Ян", "Максим", "Виктория"];
-
-    const surnames: string[] = ["Сергеева", "Никифорова", "Бирюков", "Сомова",
-    "Раков", "Селиванова", "Михайлова", "Корнилов", "Пахомов", "Баженов", "Сергеева"];
-
-    const patronymic: string[] = ["Марковна", "Николаевна", "Ильич", "Платоновна",
-    "Николаевич", "Михайловна", "Тимофеевна", "Леонидович", "Максимович", "Даниилович", "Марковна"];
-
-    const birthDates: Date[] = [
-      new Date(1999, 0, 15),
-      new Date(2000, 1, 27),
-      new Date(2000, 5, 13),
-      new Date(2000, 6, 4),
-      new Date(2000, 7, 12),
-      new Date(2000, 9, 5),
-      new Date(2001, 7, 4),
-      new Date(2001, 7, 8),
-      new Date(2002, 5, 5),
-      new Date(2002, 7, 9),
-      new Date(1999, 0, 15),
-    ];
-
-    const middleMark: number[] = [22.7, 2.8, 2.4, 4.2, 3.0, 2.6, 2.5, 3.1, 4.4, 4.3, 3.3];
-
-    for (let i: number = 0; i < names.length; i++) {
-      const tempStud = new Student(names[i], patronymic[i], surnames[i], birthDates[i], middleMark[i]);
-      this.students.push(tempStud);
-    }
-    this.sortStud();
-    this.createTableStud();
-  }
-
-  createTableStud(): void{
-    this.tableStud = [];
-    for (const stud of this.students){
-      // условие попадания в таблицу
-      if (stud.filtred && !(stud.deleted)) {
-        this.tableStud.push(stud);
-      }
-    }
-  }
-
-  getAllStudent(): Student[] {
-    return this.tableStud;
-  }
+  delStudent: number = -1;
 
   setClassOn(): void {
     this.classOn = this.classOn ? false : true;
@@ -133,12 +107,12 @@ export class TableStudComponent {
 
   findStudent(key: string, param: string): void {
     if (key === "") {
-      for (const stud of this.students) {
+      for (const stud of this.studService.students) {
         stud.find = false;
       }
       return;
     }
-    for (const stud of this.students) {
+    for (const stud of this.studService.students) {
       switch (param) {
         case "name":
             stud.find = stud.name.toLowerCase().startsWith(key.trim().toLowerCase()) ? true : false;
@@ -153,19 +127,19 @@ export class TableStudComponent {
           break;
       }
     }
-    this.createTableStud();
+    this.studService.createTableStud();
   }
 
   filterStud(): void {
     switch (this.fiterParam){
       case "number":
-        for (const stud of this.students){
+        for (const stud of this.studService.students){
           // не подходит под диапозон
           stud.filtred = ((stud.middleMark < this.filterStart) || (stud.middleMark > this.filterEnd)) ? false : true ;
         }
         break;
       case "date":
-        for (const stud of this.students){
+        for (const stud of this.studService.students){
           // не подходит под диапозон
           stud.filtred = ((stud.birthdate < this.filterStart) || (stud.birthdate > this.filterEnd)) ? false : true ;
         }
@@ -173,18 +147,18 @@ export class TableStudComponent {
       default:
         break;
     }
-    this.createTableStud();
+    this.studService.createTableStud();
   }
 
   notFilter(): void {
-    for (const stud of this.students){
+    for (const stud of this.studService.students){
       stud.filtred = true;
     }
-    this.createTableStud();
+    this.studService.createTableStud();
   }
 
   sortStud(param: string = "id"): void {
-    this.students.sort((prev: Student, next: Student) => {
+    this.studService.students.sort((prev: Student, next: Student) => {
       if (prev.getFieldByKey(param) < next.getFieldByKey(param)) {
         return -1;
       }
@@ -196,7 +170,7 @@ export class TableStudComponent {
       }
       return 0;
     });
-    this.createTableStud();
+    this.studService.createTableStud();
   }
 
   getShowMessage(): boolean {
@@ -204,17 +178,18 @@ export class TableStudComponent {
   }
 
   deleteRow(): void {
-    this.delStudent.deleted = true;
-    this.createTableStud();
+    // this.delStudent.deleted = true;
+    this.studService.deleteStudent(this.delStudent);
+    this.studService.createTableStud();
     this.popupOff();
   }
 
-  popupOff(stud?: Student): void {
-    if (stud){
-      this.delStudent = stud;
-      stud.procDel = true;
+  popupOff(id: number = -1): void {
+    if ((id) !== -1){
+      this.delStudent = (id);
+      this.studService.tableStudents[id].procDel = true;
     } else {
-      this.delStudent.procDel = false;
+      this.studService.tableStudents[this.delStudent].procDel = false;
     }
     this.processDel = !this.processDel;
   }

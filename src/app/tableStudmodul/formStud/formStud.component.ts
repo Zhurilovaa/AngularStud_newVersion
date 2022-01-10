@@ -1,5 +1,10 @@
-import { Component, Input, ChangeDetectionStrategy  } from "@angular/core";
+import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef  } from "@angular/core";
 import { FormControl, FormGroup, Validators, AbstractControl } from "@angular/forms";
+
+import { ActivatedRoute,  Router } from "@angular/router";
+import { OnlineStudentService } from "src/app/service/stud-online.service";
+import { StudentService, OflineStudentService } from "src/app/service/stud-ofline.service";
+
 import { formatDate } from "@angular/common" ;
 import { Student } from "../student";
 
@@ -12,16 +17,26 @@ export interface ValidationErrors {
     selector: "app-formStud",
     templateUrl: "./formStud.component.html",
     styleUrls: ["./formStud.component.less"],
-    changeDetection: ChangeDetectionStrategy.OnPush
+    changeDetection: ChangeDetectionStrategy.OnPush,
+    providers: [{
+        provide: StudentService,
+        useFactory: (snapshot: ActivatedRoute): StudentService => {
+          return snapshot.snapshot.url[snapshot.snapshot.url.length - 1].path === "online" ?
+          new OnlineStudentService() :
+          new OflineStudentService();
+        },
+        deps: [ActivatedRoute]
+      }]
 })
 export class FormStudComponent {
-    @Input() students: Student[] = [];
-    @Input() tableS: Student[] = [];
+    // @Input() students: Student[] = [];
+    // @Input() tableS: Student[] = [];
     @Input() param: string = "";
     @Input() idStud: number = -1;
 
     popUpAdd: boolean = false;
     popUpEdit: boolean = false;
+    online = true;
 
     formStud: FormGroup = new FormGroup({
         studName: new FormGroup({
@@ -32,6 +47,17 @@ export class FormStudComponent {
         bDate: new FormControl(null, [Validators.required, this.ageRangeValidator]),
         mark: new FormControl(null, [Validators.required, this.markRangeValidator])
     });
+
+    constructor(private ref: ChangeDetectorRef, public router: Router, public activeRoute: ActivatedRoute, public studService: StudentService) {
+
+        activeRoute.url.subscribe((e) => {
+          if (e[e.length - 1].path === "online"){
+            this.online = true;
+          } else {
+            this.online = false;
+          }
+        });
+    }
 
     setPopUpAddOrEdit(): void {
         this.popUpAdd = (this.param === "add") ? true : false;
@@ -50,7 +76,7 @@ export class FormStudComponent {
 
     popUpCloseStud(): void {
         if (this.popUpEdit){
-            this.tableS[this.idStud].procEdit = false;
+            this.studService.tableStudents[this.idStud].procEdit = false;
         }
         this.popUpAdd = false;
         this.popUpEdit = false;
@@ -110,8 +136,8 @@ export class FormStudComponent {
     }
 
     private setValue(): void {
-        const studToEdit = this.tableS[this.idStud];
-        this.tableS[this.idStud].procEdit = true;
+        const studToEdit = this.studService.tableStudents[this.idStud];
+        this.studService.tableStudents[this.idStud].procEdit = true;
         if (studToEdit !== undefined){
             const correctDate = studToEdit?.birthdate;
             this.formStud.get("bDate")?.setValue(formatDate(correctDate.toLocaleDateString().split(".").reverse().join("-"), "yyyy-MM-dd", "en"));
@@ -138,13 +164,12 @@ export class FormStudComponent {
             const currStud = new Student(name, patronym, surname, birthDate, mark);
             // добавляем
             if (this.popUpAdd){
-                this.students.push(currStud);
-                this.tableS.push(currStud);
+                this.studService.newStudent(currStud);
                 this.popUpCloseStud();
             } else if (this.popUpEdit){ // редактируем
-                this.tableS[this.idStud].editStudent(name, patronym, surname, birthDate, mark);
+                this.studService.editStudent(this.idStud, currStud);
                 this.popUpCloseStud();
-                this.tableS[this.idStud].procEdit = false;
+                this.studService.tableStudents[this.idStud].procEdit = false;
             }
         }
     }

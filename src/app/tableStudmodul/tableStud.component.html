@@ -57,7 +57,7 @@
     </div>   
     </div>
     <div class="tableStudent">
-      <app-formStud [students]="students" [tableS]="tableStud" [param]="'add'"></app-formStud>
+      <app-formStud [param]="'add'"></app-formStud>
       <table class = "studentTable">
         <tr>
           <th>#</th>        
@@ -69,16 +69,16 @@
           <th></th>
           <th></th>
         </tr>
-         <tr *ngFor="let stud of getAllStudent(); let i = index"  studClass [markCheck]="getClassOn()" [studFlags] = "stud.getAllFlags()" > 
+         <tr *ngFor="let stud of studService.getAllStudents(); let i = index"  studClass [markCheck]="getClassOn()" [studFlags] = "stud.getAllFlags()" > 
           <td> {{i+1}} </td>          
           <td> {{stud.surname | niceName}} </td>
           <td> {{stud.name | niceName}} </td>
           <td> {{stud.patronym | niceName}} </td>        
           <td> {{stud.birthdate | niceDate }} </td>
           <td> {{stud.middleMark}} </td> 
-          <td> <app-formStud [students]="students" [tableS]="tableStud" [param]="'edit'" [idStud]="i"></app-formStud></td>       
+          <td> <app-formStud [param]="'edit'" [idStud]="i"></app-formStud></td>
           <td>
-            <button type="button" class="btnDel" (click)="popupOff(stud)">x</button>
+            <button type="button" class="btnDel" (click)="popupOff(i)">x</button>
           </td>
         </tr>
       </table>
